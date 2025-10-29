@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+/// Tipos de notificação disponíveis para cada medicação
+enum NotificationType {
+  none,   // não notificar
+  onTime, // notificar no horário exato
+  early,  // notificar com adiantamento (ex: 5 min antes)
+  late,   // notificar com atraso (ex: 5 min depois)
+}
+
 class Medicine {
   int? id;
   String medName;
@@ -13,6 +21,8 @@ class Medicine {
   Map<String, int> takenDoses; // {'2025-09-23': 1, '2025-09-24': 0}
   int profileId; // identifica o usuário/pessoa associada
 
+  NotificationType notificationType; // novo campo para o tipo de notificação
+
   Medicine({
     this.id,
     required this.medName,
@@ -24,9 +34,11 @@ class Medicine {
     this.maxDoses = 0,
     Map<String, int>? takenDoses,
     this.profileId = 0,
+    this.notificationType = NotificationType.onTime,
   })  : daysOfWeek = daysOfWeek ?? List.filled(7, true),
         takenDoses = takenDoses ?? {};
 
+  /// Converte o objeto em um Map para salvar no banco local
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -37,11 +49,14 @@ class Medicine {
       'observations': observations,
       'daysOfWeek': daysOfWeek.map((d) => d ? "1" : "0").join(','),
       'maxDoses': maxDoses,
-      'takenDoses': takenDoses.entries.map((e) => "${e.key}:${e.value}").join(';'),
+      'takenDoses':
+          takenDoses.entries.map((e) => "${e.key}:${e.value}").join(';'),
       'profileId': profileId,
+      'notificationType': notificationType.name, // salva o nome do enum
     };
   }
 
+  /// Constrói um objeto [Medicine] a partir de um Map salvo
   factory Medicine.fromMap(Map<String, dynamic> map) {
     Map<String, int> parsedTakenDoses = {};
     if (map['takenDoses'] != null && (map['takenDoses'] as String).isNotEmpty) {
@@ -61,7 +76,10 @@ class Medicine {
           .where((t) => t.isNotEmpty)
           .map((t) {
         final parts = t.split(':');
-        return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+        return TimeOfDay(
+          hour: int.parse(parts[0]),
+          minute: int.parse(parts[1]),
+        );
       }).toList(),
       imagePath: map['imagePath'],
       observations: map['observations'],
@@ -72,6 +90,10 @@ class Medicine {
       maxDoses: map['maxDoses'] ?? 0,
       takenDoses: parsedTakenDoses,
       profileId: map['profileId'] ?? 0,
+      notificationType: NotificationType.values.firstWhere(
+        (e) => e.name == map['notificationType'],
+        orElse: () => NotificationType.onTime,
+      ),
     );
   }
 }

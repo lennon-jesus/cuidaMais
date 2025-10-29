@@ -1,5 +1,4 @@
 // ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -7,11 +6,15 @@ import '/models/medic.dart';
 import '/models/profile.dart';
 import '/db/dbhelper.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'main.dart'; // para NotificationService e formatarDias
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final Function(AppThemeMode)? onThemeChanged;
+  final AppThemeMode? currentTheme;
+
+  const HomeScreen({super.key, this.onThemeChanged, this.currentTheme});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -63,11 +66,39 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String gerarTextoCompartilhamento(Medicine med) {
+    final DateTime agora = DateTime.now();
+    final String dataFormatada = DateFormat(
+      "d 'de' MMMM 'de' y",
+      'pt_BR',
+    ).format(agora);
+    final String horarios = med.medTimes
+        .map((t) => t.format(context))
+        .join(', ');
+
+    return "Olá, ${activeProfile?.name ?? ''}. Você possui agendada a medicação "
+        "${med.medName} (${med.medDose}) às $horarios do dia $dataFormatada.";
+  }
+
   @override
   void initState() {
     super.initState();
     loadProfiles();
     _loadMed();
+    Future.delayed(const Duration(milliseconds: 400), _checkProfileExists);
+  }
+
+  Future<void> _checkProfileExists() async {
+    if (profiles.isEmpty) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      _showAddProfileDialog();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Crie um perfil para começar!"),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   void loadProfiles() async {
@@ -169,6 +200,8 @@ class _HomeScreenState extends State<HomeScreen> {
     int maxDoses = med?.maxDoses ?? 0;
     int profileId = med?.profileId ?? 0;
     List<bool> daysOfWeek = List.from(med?.daysOfWeek ?? List.filled(7, true));
+    NotificationType notificationType =
+        med?.notificationType ?? NotificationType.onTime;
 
     final nameController = TextEditingController(text: medName);
     final doseController = TextEditingController(text: medDose);
@@ -296,6 +329,40 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+
+                  // Tipo de notificação
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Tipo de notificação:",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  DropdownButton<NotificationType>(
+                    value: notificationType,
+                    isExpanded: true,
+                    items: NotificationType.values.map((type) {
+                      String label;
+                      switch (type) {
+                        case NotificationType.none:
+                          label = "Não notificar";
+                          break;
+                        case NotificationType.onTime:
+                          label = "No horário exato";
+                          break;
+                        case NotificationType.early:
+                          label = "Com adiantamento (5 min antes)";
+                          break;
+                        case NotificationType.late:
+                          label = "Com atraso (5 min depois)";
+                          break;
+                      }
+                      return DropdownMenuItem(value: type, child: Text(label));
+                    }).toList(),
+                    onChanged: (val) =>
+                        setStateSB(() => notificationType = val!),
+                  ),
 
                   ElevatedButton.icon(
                     onPressed: () async {
@@ -391,6 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         daysOfWeek: daysOfWeek,
                         maxDoses: maxDoses,
                         profileId: activeProfile!.id!,
+                        notificationType: notificationType,
                       );
                       await _dbHelper.insertMed(novoMed);
                     } else {
@@ -401,6 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       med.observations = observations;
                       med.daysOfWeek = daysOfWeek;
                       med.maxDoses = maxDoses;
+                      med.notificationType = notificationType;
                       await _dbHelper.updateMed(med);
                     }
 
@@ -408,14 +477,32 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.pop(context);
 
                     // Agenda notificações
+                    // Agenda notificações com base no tipo
                     for (var t in medTimes) {
                       for (int i = 0; i < daysOfWeek.length; i++) {
-                        if (daysOfWeek[i]) {
+                        if (daysOfWeek[i] &&
+                            notificationType != NotificationType.none) {
+                          TimeOfDay adjustedTime = t;
+                          if (notificationType == NotificationType.early) {
+                            final totalMinutes = t.hour * 60 + t.minute - 5;
+                            adjustedTime = TimeOfDay(
+                              hour: (totalMinutes ~/ 60) % 24,
+                              minute: totalMinutes % 60,
+                            );
+                          } else if (notificationType ==
+                              NotificationType.late) {
+                            final totalMinutes = t.hour * 60 + t.minute + 5;
+                            adjustedTime = TimeOfDay(
+                              hour: (totalMinutes ~/ 60) % 24,
+                              minute: totalMinutes % 60,
+                            );
+                          }
+
                           await _notificationService.scheduleWeeklyNotification(
                             med?.id ?? DateTime.now().millisecondsSinceEpoch,
                             "Hora do Remédio",
                             "$medName - $medDose",
-                            t,
+                            adjustedTime,
                             i + 1,
                           );
                         }
@@ -459,7 +546,22 @@ class _HomeScreenState extends State<HomeScreen> {
     DateTime today = DateTime.now();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Meus Medicamentos"), centerTitle: true),
+      appBar: AppBar(
+        title: const Text("Meus Medicamentos"),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () async {
+              final newTheme = await Navigator.pushNamed(context, '/settings');
+              if (newTheme is AppThemeMode) {
+                final callback = widget.onThemeChanged;
+                if (callback != null) callback(newTheme);
+              }
+            },
+          ),
+        ],
+      ),
       body: Column(
         children: [
           // --------------- CALENDÁRIO 10 DIAS ----------------
@@ -570,7 +672,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: const Icon(Icons.person_add),
                 label: const Text("Criar Perfil"),
               ),
-              const SizedBox(width: 12), 
+              const SizedBox(width: 12),
               if (activeProfile != null)
                 ElevatedButton.icon(
                   onPressed: () => deleteProfile(activeProfile!),
@@ -602,6 +704,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.share,
+                                  color: Colors.green,
+                                ),
+                                onPressed: () {
+                                  final texto = gerarTextoCompartilhamento(med);
+                                  Share.share(texto);
+                                },
+                              ),
                               IconButton(
                                 icon: const Icon(
                                   Icons.edit,

@@ -41,7 +41,8 @@ class DatabaseHelper {
             daysOfWeek TEXT,
             maxDoses INTEGER DEFAULT 0,
             takenDoses TEXT,
-            profileId INTEGER DEFAULT 0
+            profileId INTEGER DEFAULT 0,
+            notificationType TEXT DEFAULT 'onTime'
           )
         ''');
       },
