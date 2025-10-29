@@ -8,7 +8,7 @@ import '/db/dbhelper.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
-import 'main.dart'; // para NotificationService e formatarDias
+import 'main.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(AppThemeMode)? onThemeChanged;
@@ -434,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                   if (confirmar == true) {
-                    Navigator.pop(context); // fecha o form
+                    Navigator.pop(context);
                   }
                 },
                 child: const Text("Cancelar"),
@@ -476,8 +476,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     await _loadMed();
                     Navigator.pop(context);
 
-                    // Agenda notificações
-                    // Agenda notificações com base no tipo
                     for (var t in medTimes) {
                       for (int i = 0; i < daysOfWeek.length; i++) {
                         if (daysOfWeek[i] &&
