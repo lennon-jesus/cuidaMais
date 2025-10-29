@@ -138,7 +138,7 @@ class _MedAppState extends State<MedApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Converte AppThemeMode → ThemeMode
+    // Converte AppThemeMode > ThemeMode
     ThemeMode currentThemeMode;
     switch (_themeMode) {
       case AppThemeMode.light:
@@ -172,7 +172,7 @@ class _MedAppState extends State<MedApp> {
           foregroundColor: Colors.white,
         ),
       ),
-      themeMode: currentThemeMode, // ✅ usa o modo atual
+      themeMode: currentThemeMode,
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -183,11 +183,11 @@ class _MedAppState extends State<MedApp> {
       routes: {
         '/settings': (context) => SettingsScreen(
           currentTheme: _themeMode,
-          onThemeChanged: _changeTheme, // ✅ adiciona callback
+          onThemeChanged: _changeTheme,
         ),
       },
       home: widget.showWelcome
-          ? const OnboardingScreen() // ✅ fixo, sempre claro
+          ? const OnboardingScreen() 
           : HomeScreen(onThemeChanged: _changeTheme, currentTheme: _themeMode),
     );
   }
@@ -305,7 +305,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   },
                 ),
               ),
-              // Indicadores
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
@@ -324,7 +323,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              // Botões
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Row(
@@ -371,7 +369,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-// Função auxiliar para formatar dias
 String formatarDias(List<bool> days) {
   const nomes = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   if (days.every((d) => !d)) return "Nenhum dia";
