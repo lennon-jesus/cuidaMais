@@ -8,7 +8,8 @@ import '/db/dbhelper.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
-import 'main.dart'; // para NotificationService e formatarDias
+import 'main.dart';
+import 'report_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(AppThemeMode)? onThemeChanged;
@@ -434,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                   if (confirmar == true) {
-                    Navigator.pop(context); // fecha o form
+                    Navigator.pop(context);
                   }
                 },
                 child: const Text("Cancelar"),
@@ -476,8 +477,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     await _loadMed();
                     Navigator.pop(context);
 
-                    // Agenda notificações
-                    // Agenda notificações com base no tipo
                     for (var t in medTimes) {
                       for (int i = 0; i < daysOfWeek.length; i++) {
                         if (daysOfWeek[i] &&
@@ -664,24 +663,42 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton.icon(
-                onPressed: _showAddProfileDialog,
-                icon: const Icon(Icons.person_add),
-                label: const Text("Criar Perfil"),
-              ),
-              const SizedBox(width: 12),
-              if (activeProfile != null)
-                ElevatedButton.icon(
-                  onPressed: () => deleteProfile(activeProfile!),
-                  icon: const Icon(Icons.delete),
-                  label: const Text("Remover Perfil"),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                ),
-            ],
-          ),
+          Wrap(
+  alignment: WrapAlignment.center,
+  spacing: 12,
+  runSpacing: 12,
+  children: [
+    ElevatedButton.icon(
+      onPressed: _showAddProfileDialog,
+      icon: const Icon(Icons.person_add),
+      label: const Text("Criar Perfil"),
+    ),
+    if (activeProfile != null)
+      ElevatedButton.icon(
+        onPressed: () => deleteProfile(activeProfile!),
+        icon: const Icon(Icons.delete),
+        label: const Text("Remover Perfil"),
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+      ),
+    if (activeProfile != null)
+      ElevatedButton.icon(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ReportScreen(profile: activeProfile!),
+            ),
+          );
+        },
+        icon: const Icon(Icons.assignment_turned_in),
+        label: const Text("Relatório"),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.indigo,
+        ),
+      ),
+  ],
+),
+
 
           // --------------- LISTA DE MEDICAMENTOS ----------------
           Expanded(
