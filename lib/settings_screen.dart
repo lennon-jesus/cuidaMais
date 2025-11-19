@@ -1,4 +1,3 @@
-// settings_screen.dart
 // ignore_for_file: deprecated_member_use
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -11,12 +10,12 @@ import 'package:file_picker/file_picker.dart';
 
 class SettingsScreen extends StatefulWidget {
   final AppThemeMode currentTheme;
-  final void Function(AppThemeMode mode) onThemeChanged; // <-- ADICIONADO
+  final void Function(AppThemeMode mode) onThemeChanged;
 
   const SettingsScreen({
     super.key,
     required this.currentTheme,
-    required this.onThemeChanged, // <-- CORRIGIDO
+    required this.onThemeChanged,
   });
 
   @override
@@ -40,7 +39,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _working = false);
 
     if (res.success && res.filePath != null) {
-      await Share.shareXFiles([XFile(res.filePath!)], text: 'Backup Cuida+');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Backup criado e compartilhável.')),
       );
@@ -113,7 +111,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Seleção de tema
               RadioListTile<AppThemeMode>(
                 title: const Text('Padrão do sistema'),
                 value: AppThemeMode.system,
@@ -173,12 +170,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const Spacer(),
 
-              // Salvar tema
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    widget.onThemeChanged(_selectedTheme); // <-- agora funciona
+                    widget.onThemeChanged(_selectedTheme); 
                     Navigator.pop(context, _selectedTheme);
                   },
                   icon: const Icon(Icons.save),

@@ -12,20 +12,17 @@ class DatabaseHelper {
 
   static Database? _db;
 
-  /// Retorna a instância ativa do DB
   Future<Database> get database async {
     if (_db != null) return _db!;
     _db = await _initDb();
     return _db!;
   }
 
-  /// Caminho completo do arquivo do banco
   Future<String> getDatabaseFilePath() async {
     final dbPath = await getDatabasesPath();
     return p.join(dbPath, 'medic.db');
   }
 
-  /// Inicializa o banco
   Future<Database> _initDb() async {
     final path = await getDatabaseFilePath();
 
@@ -59,7 +56,6 @@ class DatabaseHelper {
     );
   }
 
-  /// Fecha a conexão
   Future<void> close() async {
     if (_db != null) {
       await _db!.close();
@@ -67,7 +63,6 @@ class DatabaseHelper {
     }
   }
 
-  /// CRUD – Medicine
   Future<int> insertMed(Medicine medicine) async {
     final db = await database;
     return await db.insert('medicine', medicine.toMap());
@@ -98,7 +93,6 @@ class DatabaseHelper {
     return await db.delete('medicine', where: 'id = ?', whereArgs: [id]);
   }
 
-  /// CRUD – Profile
   Future<int> insertProfile(Profile profile) async {
     final db = await database;
     return await db.insert('profiles', profile.toMap());
@@ -115,7 +109,6 @@ class DatabaseHelper {
     return await db.delete('profiles', where: 'id = ?', whereArgs: [id]);
   }
 
-  /// Exporta o arquivo físico do DB
   Future<String> exportDatabaseFileTo(String destinationPath) async {
     await close();
     final dbPath = await getDatabaseFilePath();
@@ -126,7 +119,6 @@ class DatabaseHelper {
     return dest.path;
   }
 
-  /// Substitui o banco atual pelo enviado
   Future<bool> replaceDatabaseWith(String sourcePath) async {
     try {
       await close();
@@ -143,7 +135,6 @@ class DatabaseHelper {
     }
   }
 
-  /// Mesma função usada pelo BackupService
   Future<void> closeDB() async {
     if (_db != null) {
       await _db!.close();

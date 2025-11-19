@@ -138,7 +138,6 @@ class _MedAppState extends State<MedApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Converte AppThemeMode > ThemeMode
     ThemeMode currentThemeMode;
     switch (_themeMode) {
       case AppThemeMode.light:

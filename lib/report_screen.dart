@@ -26,7 +26,6 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Future<void> _load() async {
     final meds = await _db.getMedsByProfile(widget.profile.id!);
-    // takenDoses assumed Map<String,int> inside Medicine.takenDoses
     final Map<String, List<Map<String, dynamic>>> map = {};
     for (var m in meds) {
       m.takenDoses.forEach((date, count) {
@@ -43,7 +42,7 @@ class _ReportScreenState extends State<ReportScreen> {
       _meds = meds;
       _byDate = Map.fromEntries(
         map.entries.toList()
-          ..sort((a, b) => b.key.compareTo(a.key)), // order desc by date
+          ..sort((a, b) => b.key.compareTo(a.key)), 
       );
     });
   }

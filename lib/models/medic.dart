@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Tipos de notificação disponíveis para cada medicação
 enum NotificationType {
-  none,   // não notificar
-  onTime, // notificar no horário exato
-  early,  // notificar com adiantamento
-  late,   // notificar com atraso
+  none,   
+  onTime, 
+  early,  
+  late,   
 }
 
 class Medicine {
@@ -15,14 +14,14 @@ class Medicine {
   List<TimeOfDay> medTimes;
   String? imagePath;
   String? observations;
-  List<bool> daysOfWeek; // [Seg, Ter, Qua, Qui, Sex, Sab, Dom]
+  List<bool> daysOfWeek; 
 
-  int maxDoses; // quantidade total de doses disponíveis
+  int maxDoses;
   Map<String, int> takenDoses; // {'2025-09-23': 1, '2025-09-24': 0}
 
-  int profileId; // identifica o perfil dono do medicamento
+  int profileId;
 
-  NotificationType notificationType; // tipo de notificação
+  NotificationType notificationType;
 
   Medicine({
     this.id,
@@ -39,7 +38,6 @@ class Medicine {
   })  : daysOfWeek = daysOfWeek ?? List.filled(7, true),
         takenDoses = takenDoses ?? {};
 
-  /// Converte o objeto em um Map para salvar no banco
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -53,11 +51,10 @@ class Medicine {
       'takenDoses':
           takenDoses.entries.map((e) => "${e.key}:${e.value}").join(';'),
       'profileId': profileId,
-      'notificationType': notificationType.name, // salva nome do enum
+      'notificationType': notificationType.name,
     };
   }
 
-  /// Constrói o objeto a partir do Map do banco
   factory Medicine.fromMap(Map<String, dynamic> map) {
     Map<String, int> parsedTakenDoses = {};
 
