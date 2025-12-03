@@ -1,4 +1,5 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously, unused_element
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -10,6 +11,10 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'main.dart';
 import 'report_screen.dart';
+import 'day_report_screen.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(AppThemeMode)? onThemeChanged;
@@ -55,6 +60,120 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Verifica se houve mudanças nos horários ou dias da semana
+  bool _hasNotificationChanges(Medicine oldMed, Medicine newMed) {
+    // Comparar horários
+    if (oldMed.medTimes.length != newMed.medTimes.length) {
+      return true;
+    }
+
+    for (int i = 0; i < oldMed.medTimes.length; i++) {
+      if (oldMed.medTimes[i].hour != newMed.medTimes[i].hour ||
+          oldMed.medTimes[i].minute != newMed.medTimes[i].minute) {
+        return true;
+      }
+    }
+
+    // Comparar dias da semana
+    if (oldMed.daysOfWeek.length != newMed.daysOfWeek.length) {
+      return true;
+    }
+
+    for (int i = 0; i < oldMed.daysOfWeek.length; i++) {
+      if (oldMed.daysOfWeek[i] != newMed.daysOfWeek[i]) {
+        return true;
+      }
+    }
+
+    // Comparar tipo de notificação
+    if (oldMed.notificationType != newMed.notificationType) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<String?> _copyImageToAppDirectory(String sourcePath) async {
+    try {
+      // Obter diretório do app
+      final appDir = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory(path.join(appDir.path, 'medicine_images'));
+
+      // Criar diretório se não existir
+      if (!await imagesDir.exists()) {
+        await imagesDir.create(recursive: true);
+      }
+
+      // Gerar nome único para o arquivo
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(sourcePath)}';
+      final destPath = path.join(imagesDir.path, fileName);
+
+      // Copiar arquivo
+      final sourceFile = File(sourcePath);
+      await sourceFile.copy(destPath);
+
+      print('✅ Imagem copiada para: $destPath');
+      return destPath;
+    } catch (e) {
+      print('❌ Erro ao copiar imagem: $e');
+      return null;
+    }
+  }
+
+  // Método para pegar imagem e já copiar para o app
+  Future<String?> _pickAndSaveImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+      );
+
+      if (pickedFile != null) {
+        // Copiar para diretório do app
+        final savedPath = await _copyImageToAppDirectory(pickedFile.path);
+        return savedPath;
+      }
+      return null;
+    } catch (e) {
+      print('❌ Erro ao selecionar imagem: $e');
+      return null;
+    }
+  }
+
+  // Método para limpar imagens não utilizadas (opcional)
+  Future<void> _cleanUnusedImages() async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory(path.join(appDir.path, 'medicine_images'));
+
+      if (!await imagesDir.exists()) return;
+
+      // Buscar todas imagens usadas nos medicamentos
+      final usedImagePaths = <String>{};
+      for (var med in _medicine) {
+        if (med.imagePath != null && med.imagePath!.isNotEmpty) {
+          usedImagePaths.add(med.imagePath!);
+        }
+      }
+
+      // Listar arquivos no diretório
+      final files = await imagesDir.list().toList();
+
+      for (var file in files) {
+        if (file is File) {
+          final filePath = file.path;
+          if (!usedImagePaths.contains(filePath)) {
+            // Arquivo não está sendo usado, pode deletar
+            await file.delete();
+            print('🧹 Limpou imagem não utilizada: ${path.basename(filePath)}');
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Erro ao limpar imagens: $e');
+    }
+  }
+
   List<Medicine> _medicine = [];
   Profile? activeProfile;
   List<Profile> profiles = [];
@@ -86,7 +205,90 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     loadProfiles();
     _loadMed();
-    Future.delayed(const Duration(milliseconds: 400), _checkProfileExists);
+    Future.delayed(const Duration(milliseconds: 400), () async {
+      await _checkProfileExistsFirstTimeOnly();
+    });
+  }
+
+  Future<void> _checkProfileExistsFirstTimeOnly() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool alreadyAsked = prefs.getBool('askedToCreateProfile') ?? false;
+
+    // Só mostrar se não tem perfis E nunca pedimos antes
+    if (profiles.isEmpty && !alreadyAsked) {
+      await prefs.setBool('askedToCreateProfile', true);
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      _showAddProfileDialogForced(); // Dialog sem opção de cancelar
+    }
+  }
+
+  void _showAddProfileDialogForced() {
+    final TextEditingController controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Não pode fechar clicando fora
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Bem-vindo ao Cuida+!"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Para começar, crie seu primeiro perfil.\n"
+                "Pode ser seu nome ou de quem você cuida.",
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  hintText: "Ex: Maria, João, Papai, etc.",
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            // Só tem botão de criar - usuário precisa criar para continuar
+            ElevatedButton(
+              onPressed: () async {
+                if (controller.text.trim().isNotEmpty) {
+                  final profileName = controller.text.trim();
+                  await _dbHelper.insertProfile(Profile(name: profileName));
+                  Navigator.pop(context);
+                  loadProfiles();
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Perfil "$profileName" criado! Agora você pode adicionar medicamentos.',
+                      ),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Por favor, digite um nome para o perfil"),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Criar Perfil e Começar"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _checkProfileExists() async {
@@ -178,10 +380,43 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<String?> _pickImage() async {
-    final XFile? pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery,
-    );
-    return pickedFile?.path;
+    return await _pickAndSaveImage();
+  }
+
+  /// Remove um horário específico de um medicamento
+  Future<void> _removeTimeFromMedication(
+    Medicine med,
+    TimeOfDay timeToRemove,
+  ) async {
+    try {
+      // Remover notificações deste horário
+      await _notificationService.cancelSpecificTimeNotifications(
+        med,
+        timeToRemove,
+      );
+
+      // Remover horário da lista
+      med.medTimes.removeWhere(
+        (time) =>
+            time.hour == timeToRemove.hour &&
+            time.minute == timeToRemove.minute,
+      );
+
+      // Atualizar no banco de dados
+      await _dbHelper.updateMed(med);
+
+      // Atualizar lista local
+      await _loadMed();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Horário ${timeToRemove.format(context)} removido!'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print('❌ Erro ao remover horário: $e');
+    }
   }
 
   /// ------------------ CALENDÁRIO: 7 DIAS ANTES + 7 DIAS DEPOIS ------------------
@@ -192,7 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// ------------------ FORMULÁRIO DE MEDICAMENTO ------------------
-  void _openForm({Medicine? med}) {
+  Future<void> _openForm({Medicine? med}) async {
     String medName = med?.medName ?? "";
     String medDose = med?.medDose ?? "";
     List<TimeOfDay> medTimes = List.from(med?.medTimes ?? []);
@@ -215,7 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
-    showDialog(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateSB) {
@@ -279,31 +514,50 @@ class _HomeScreenState extends State<HomeScreen> {
                       ...medTimes.asMap().entries.map((entry) {
                         int i = entry.key;
                         TimeOfDay time = entry.value;
-                        return ListTile(
+                        return // Na lista de horários do formulário, substitua o ListTile por:
+                        ListTile(
                           title: Text(
                             "Horário ${i + 1}: ${time.format(context)}",
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.access_time),
-                            onPressed: () async {
-                              TimeOfDay? picked = await showTimePicker(
-                                context: context,
-                                initialTime: time,
-                              );
-                              if (picked != null) {
-                                if (medTimes.contains(picked)) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Esse horário já foi adicionado.",
-                                      ),
-                                    ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.access_time),
+                                onPressed: () async {
+                                  TimeOfDay? picked = await showTimePicker(
+                                    context: context,
+                                    initialTime: time,
                                   );
-                                } else {
-                                  setStateSB(() => medTimes[i] = picked);
-                                }
-                              }
-                            },
+                                  if (picked != null) {
+                                    if (medTimes.contains(picked)) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Esse horário já foi adicionado.",
+                                          ),
+                                        ),
+                                      );
+                                    } else {
+                                      setStateSB(() => medTimes[i] = picked);
+                                    }
+                                  }
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () {
+                                  setStateSB(() {
+                                    medTimes.removeAt(i);
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                         );
                       }),
@@ -367,7 +621,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   ElevatedButton.icon(
                     onPressed: () async {
-                      String? path = await _pickImage();
+                      String? path = await _pickImage(); // Já usa o novo método
                       if (path != null) {
                         setStateSB(() => selectedImagePath = path);
                       }
@@ -435,7 +689,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                   if (confirmar == true) {
-                    Navigator.pop(context);
+                    Navigator.pop(context, null);
                   }
                 },
                 child: const Text("Cancelar"),
@@ -449,64 +703,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   });
 
                   if (!nameError && !doseError && !timesError) {
-                    if (med == null) {
-                      final novoMed = Medicine(
-                        medName: medName,
-                        medDose: medDose,
-                        medTimes: medTimes,
-                        imagePath: selectedImagePath,
-                        observations: observations,
-                        daysOfWeek: daysOfWeek,
-                        maxDoses: maxDoses,
-                        profileId: activeProfile!.id!,
-                        notificationType: notificationType,
-                      );
-                      await _dbHelper.insertMed(novoMed);
-                    } else {
-                      med.medName = medName;
-                      med.medDose = medDose;
-                      med.medTimes = medTimes;
-                      med.imagePath = selectedImagePath;
-                      med.observations = observations;
-                      med.daysOfWeek = daysOfWeek;
-                      med.maxDoses = maxDoses;
-                      med.notificationType = notificationType;
-                      await _dbHelper.updateMed(med);
-                    }
+                    // Preparar dados para retornar
+                    final resultData = {
+                      'medName': medName,
+                      'medDose': medDose,
+                      'medTimes': List<TimeOfDay>.from(medTimes),
+                      'imagePath': selectedImagePath,
+                      'observations': observations,
+                      'daysOfWeek': List<bool>.from(daysOfWeek),
+                      'maxDoses': maxDoses,
+                      'notificationType': notificationType,
+                      'isNew': med == null,
+                      'medId': med?.id,
+                    };
 
-                    await _loadMed();
-                    Navigator.pop(context);
-
-                    for (var t in medTimes) {
-                      for (int i = 0; i < daysOfWeek.length; i++) {
-                        if (daysOfWeek[i] &&
-                            notificationType != NotificationType.none) {
-                          TimeOfDay adjustedTime = t;
-                          if (notificationType == NotificationType.early) {
-                            final totalMinutes = t.hour * 60 + t.minute - 5;
-                            adjustedTime = TimeOfDay(
-                              hour: (totalMinutes ~/ 60) % 24,
-                              minute: totalMinutes % 60,
-                            );
-                          } else if (notificationType ==
-                              NotificationType.late) {
-                            final totalMinutes = t.hour * 60 + t.minute + 5;
-                            adjustedTime = TimeOfDay(
-                              hour: (totalMinutes ~/ 60) % 24,
-                              minute: totalMinutes % 60,
-                            );
-                          }
-
-                          await _notificationService.scheduleWeeklyNotification(
-                            med?.id ?? DateTime.now().millisecondsSinceEpoch,
-                            "Hora do Remédio",
-                            "$medName - $medDose",
-                            adjustedTime,
-                            i + 1,
-                          );
-                        }
-                      }
-                    }
+                    Navigator.pop(context, resultData);
                   }
                 },
                 child: const Text("Salvar"),
@@ -515,6 +726,140 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
+    );
+
+    // Processar o resultado retornado do dialog
+    if (result != null) {
+      await _processFormResult(result, med);
+    }
+  }
+
+  Future<void> _processFormResult(
+    Map<String, dynamic> result,
+    Medicine? originalMed,
+  ) async {
+    final medName = result['medName'] as String;
+    final medDose = result['medDose'] as String;
+    final medTimes = result['medTimes'] as List<TimeOfDay>;
+    final selectedImagePath = result['imagePath'] as String?;
+    final observations = result['observations'] as String;
+    final daysOfWeek = result['daysOfWeek'] as List<bool>;
+    final maxDoses = result['maxDoses'] as int;
+    final notificationType = result['notificationType'] as NotificationType;
+    final isNew = result['isNew'] as bool;
+    final medId = result['medId'] as int?;
+
+    Medicine savedMed;
+
+    if (isNew) {
+      // NOVO MEDICAMENTO
+      final novoMed = Medicine(
+        medName: medName,
+        medDose: medDose,
+        medTimes: medTimes,
+        imagePath: selectedImagePath,
+        observations: observations,
+        daysOfWeek: daysOfWeek,
+        maxDoses: maxDoses,
+        profileId: activeProfile!.id!,
+        notificationType: notificationType,
+      );
+      int newId = await _dbHelper.insertMed(novoMed);
+      novoMed.id = newId;
+      savedMed = novoMed;
+
+      if (notificationType != NotificationType.none) {
+        print('🔔 Agendando notificações para novo medicamento: $medName');
+        await _notificationService.scheduleMedicationNotifications(novoMed);
+      } else {
+        print('ℹ️ Tipo de notificação: none, nenhuma notificação agendada');
+      }
+    } else {
+      // EDITAR MEDICAMENTO EXISTENTE
+      final existingMed = _medicine.firstWhere((m) => m.id == medId);
+
+      // Verificar se houve mudanças relevantes para notificações
+      final bool needsNotificationUpdate = _hasNotificationChanges(
+        Medicine(
+          id: existingMed.id,
+          medName: existingMed.medName,
+          medDose: existingMed.medDose,
+          medTimes: existingMed.medTimes,
+          daysOfWeek: existingMed.daysOfWeek,
+          profileId: existingMed.profileId,
+          notificationType: existingMed.notificationType,
+        ),
+        Medicine(
+          id: existingMed.id,
+          medName: medName,
+          medDose: medDose,
+          medTimes: medTimes,
+          daysOfWeek: daysOfWeek,
+          profileId: existingMed.profileId,
+          notificationType: notificationType,
+        ),
+      );
+      // Atualizar os dados do medicamento
+      existingMed.medName = medName;
+      existingMed.medDose = medDose;
+      existingMed.medTimes = medTimes;
+      existingMed.imagePath = selectedImagePath;
+      existingMed.observations = observations;
+      existingMed.daysOfWeek = daysOfWeek;
+      existingMed.maxDoses = maxDoses;
+      existingMed.notificationType = notificationType;
+
+      await _dbHelper.updateMed(existingMed);
+      savedMed = existingMed;
+
+      // Se houve mudanças relevantes, atualizar notificações
+      if (needsNotificationUpdate) {
+        print('🔄 Detectadas mudanças que afetam notificações, atualizando...');
+
+        // Criar uma cópia do medicamento antigo para comparação
+        final oldMed = Medicine(
+          id: existingMed.id,
+          medName: existingMed.medName,
+          medDose: existingMed.medDose,
+          medTimes: existingMed.medTimes, // Horários antigos
+          daysOfWeek: existingMed.daysOfWeek, // Dias antigos
+          profileId: existingMed.profileId,
+          notificationType: existingMed.notificationType, // Tipo antigo
+        );
+
+        // Usar o método de atualização que remove antigas e agenda novas
+        await _notificationService.updateMedicationNotifications(
+          oldMed,
+          savedMed,
+        );
+      }
+    }
+
+    await _loadMed();
+
+    // Mostrar mensagem de confirmação
+    String timingText = '';
+    switch (notificationType) {
+      case NotificationType.onTime:
+        timingText = 'no horário exato';
+        break;
+      case NotificationType.early:
+        timingText = 'com 5 minutos de antecedência';
+        break;
+      case NotificationType.late:
+        timingText = 'com 5 minutos de atraso';
+        break;
+      case NotificationType.none:
+        timingText = '(sem notificações)';
+        break;
+    }
+
+    final message = isNew
+        ? '$medName salvo e notificações agendadas $timingText!'
+        : '$medName atualizado $timingText!';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
   }
 
@@ -533,9 +878,41 @@ class _HomeScreenState extends State<HomeScreen> {
     bool authenticated = await _localAuth.authenticate(
       localizedReason: 'Autentique-se para remover o medicamento',
     );
+
     if (authenticated && med.id != null) {
-      await _dbHelper.deleteMed(med.id!);
-      await _loadMed();
+      try {
+        // 1. Primeiro remover todas as notificações do medicamento
+        await _notificationService.cancelAllMedicationNotifications(med);
+
+        // 2. Depois remover do banco de dados
+        await _dbHelper.deleteMed(med.id!);
+
+        // 3. Atualizar a lista local
+        await _loadMed();
+
+        // 4. Mostrar confirmação
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${med.medName} removido e notificações canceladas!'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } catch (e) {
+        print('❌ Erro ao remover medicamento: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao remover: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } else if (!authenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Autenticação falhou'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -580,38 +957,57 @@ class _HomeScreenState extends State<HomeScreen> {
                     weekDays[i].month == today.month &&
                     weekDays[i].year == today.year;
 
-                return Container(
-                  width: 60,
-                  margin: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: isToday
-                        ? Colors.teal
-                        : hasMed
-                        ? Colors.teal.shade100
-                        : Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          DateFormat(
-                            'E',
-                            'pt_BR',
-                          ).format(weekDays[i]), // Seg, Ter, etc
-                          style: TextStyle(
-                            color: isToday ? Colors.white : Colors.black,
-                            fontWeight: FontWeight.bold,
-                          ),
+                return GestureDetector(
+                  onTap: () {
+                    final DateTime dayDate = DateTime(
+                      weekDays[i].year,
+                      weekDays[i].month,
+                      weekDays[i].day,
+                    );
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DayReportScreen(
+                          date: dayDate,
+                          profile: activeProfile,
                         ),
-                        Text(
-                          "${weekDays[i].day}",
-                          style: TextStyle(
-                            color: isToday ? Colors.white : Colors.black,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 60,
+                    margin: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isToday
+                          ? Colors.teal
+                          : hasMed
+                          ? Colors.teal.shade100
+                          : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            DateFormat(
+                              'E',
+                              'pt_BR',
+                            ).format(weekDays[i]), // Seg, Ter, etc
+                            style: TextStyle(
+                              color: isToday ? Colors.white : Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            "${weekDays[i].day}",
+                            style: TextStyle(
+                              color: isToday ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -664,41 +1060,44 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
           Wrap(
-  alignment: WrapAlignment.center,
-  spacing: 12,
-  runSpacing: 12,
-  children: [
-    ElevatedButton.icon(
-      onPressed: _showAddProfileDialog,
-      icon: const Icon(Icons.person_add),
-      label: const Text("Criar Perfil"),
-    ),
-    if (activeProfile != null)
-      ElevatedButton.icon(
-        onPressed: () => deleteProfile(activeProfile!),
-        icon: const Icon(Icons.delete),
-        label: const Text("Remover Perfil"),
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-      ),
-    if (activeProfile != null)
-      ElevatedButton.icon(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ReportScreen(profile: activeProfile!),
-            ),
-          );
-        },
-        icon: const Icon(Icons.assignment_turned_in),
-        label: const Text("Relatório"),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.indigo,
-        ),
-      ),
-  ],
-),
-
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _showAddProfileDialog,
+                icon: const Icon(Icons.person_add),
+                label: const Text("Criar Perfil"),
+              ),
+              if (activeProfile != null)
+                ElevatedButton.icon(
+                  onPressed: () => deleteProfile(activeProfile!),
+                  icon: const Icon(Icons.delete),
+                  label: const Text("Remover Perfil"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.teal.shade50,
+                  ),
+                ),
+              if (activeProfile != null)
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReportScreen(profile: activeProfile!),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.assignment_turned_in),
+                  label: const Text("Relatório"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueGrey,
+                    foregroundColor: Colors.teal.shade50,
+                  ),
+                ),
+            ],
+          ),
 
           // --------------- LISTA DE MEDICAMENTOS ----------------
           Expanded(
