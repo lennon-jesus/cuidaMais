@@ -1,0 +1,13 @@
+Lennon Jesus – Autoavaliação
+
+No projeto Cuida+, fui o principal responsável pelo desenvolvimento do código do projeto: Interface, funcionalidades, banco de dados...
+
+O projeto foi desenvolvido principalmente no VSCode, mas houve breve utilização do Android Studio. Foi utilizado o framework Flutter e suas bibliotecas feitas pela comunidade. Para testar, foram utilizados o emulador do VSCode e dispositivos Android.
+
+O projeto precisou de muitas alterações constantes devido à baixa familiaridade com o framework, comumente grandes partes do código precisaram ser removidas e substituídas, além do Flutter ter uma interface altamente confusa, com muitos símbolos e sintaxes seguidos que faz ser difícil saber o que exatamente está sendo editado, e também há muita redundância, coisas que precisam de diversas etapas que cumprem o mesmo propósito, por exemplo, certas bibliotecas precisam de ser importadas em múltiplos arquivos, e ainda pode não funcionar pois precisa ser novamente esclarecida em outros arquivos de configuração do app.
+
+Apesar disso, os testes eram fáceis e rápidos, tendo um emulador próprio e sendo rapidamente acessível num dispositivo físico, o que facilitou o desenvolvimento.
+
+Quando se trata da interface visual, o Flutter é bem prático, sendo possível fazer aplicativos modernos com visual profissional sem muito código.
+
+Devido a esses fatores, não acho que o app contou com todas funções que deveria ter, e se fosse refazer o projeto, iria focar principalmente no sistema de datas e notificações bem no início, pois foram partes extensas que demoraram funcionar, e alterar essas partes depois de tudo estar pronto acabou quebrando certas funções.
