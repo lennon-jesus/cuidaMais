@@ -10,4 +10,5 @@ Apesar disso, os testes eram fáceis e rápidos, tendo um emulador próprio e se
 
 Quando se trata da interface visual, o Flutter é bem prático, sendo possível fazer aplicativos modernos com visual profissional sem muito código.
 
-Devido a esses fatores, não acho que o app contou com todas funções que deveria ter, e se fosse refazer o projeto, iria focar principalmente no sistema de datas e notificações bem no início, pois foram partes extensas que demoraram funcionar, e alterar essas partes depois de tudo estar pronto acabou quebrando certas funções.
+O resultado final ficou agradável: Visual simples e moderno, funções rápidas e cumpre o que precisa cumprir. Se fosse refazer o projeto, iria focar principalmente no sistema de datas e notificações bem no início, pois foram partes demoradas e muito importantes.
+
