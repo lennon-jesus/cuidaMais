@@ -114,7 +114,6 @@ class NotificationService {
     try {
       final androidInfo = await _deviceInfo.androidInfo;
 
-      // Android 13+ (API 33+) requer permissão POST_NOTIFICATIONS
       if (androidInfo.version.sdkInt >= 33) {
         print('📱 Android 13+ detectado, solicitando permissões...');
 
@@ -126,14 +125,14 @@ class NotificationService {
         if (androidPlugin != null) {
           final granted = await androidPlugin.requestNotificationsPermission();
           print('📱 Permissão Android 13+: $granted');
-          return granted ?? false; // ← CORREÇÃO AQUI: converter null para false
+          return granted ?? false;
         }
       }
 
       return true;
     } catch (e) {
       print('❌ Erro ao solicitar permissões Android: $e');
-      return false; // ← CORREÇÃO AQUI: retornar false em caso de erro
+      return false;
     }
   }
 
@@ -174,13 +173,13 @@ class NotificationService {
         if (androidPlugin != null) {
           final granted = await androidPlugin.areNotificationsEnabled();
           print('🔔 Notificações habilitadas: $granted');
-          return granted ?? false; // ← CORREÇÃO AQUI
+          return granted ?? false;
         }
       }
       return true;
     } catch (e) {
       print('❌ Erro ao verificar permissão: $e');
-      return false; // ← CORREÇÃO AQUI
+      return false;
     }
   }
 
@@ -460,7 +459,6 @@ class NotificationService {
   }
 
   /// Remove notificações específicas de um horário do medicamento
-  /// Remove notificações específicas de um horário do medicamento
   Future<void> cancelSpecificTimeNotifications(
     Medicine med,
     TimeOfDay time,
@@ -531,7 +529,6 @@ class NotificationService {
     }
   }
 
-  // Teste prático: agendar para 1 minuto
   Future<void> testOneMinuteNotification() async {
     final now = DateTime.now();
     final futureTime = now.add(const Duration(minutes: 1));
@@ -558,10 +555,7 @@ class NotificationService {
       final now = DateTime.now();
 
       for (var notif in pending) {
-        // Se a notificação tem mais de 7 dias, cancelar
-        // (lógica básica - ajustar conforme necessidade)
         if (notif.id < 1000) {
-          // IDs de teste
           await _notifications.cancel(notif.id);
           print('🧹 Limpando notificação teste ID: ${notif.id}');
         }

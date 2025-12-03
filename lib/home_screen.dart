@@ -214,7 +214,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     final bool alreadyAsked = prefs.getBool('askedToCreateProfile') ?? false;
 
-    // Só mostrar se não tem perfis E nunca pedimos antes
     if (profiles.isEmpty && !alreadyAsked) {
       await prefs.setBool('askedToCreateProfile', true);
 
@@ -253,7 +252,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           actions: [
-            // Só tem botão de criar - usuário precisa criar para continuar
             ElevatedButton(
               onPressed: () async {
                 if (controller.text.trim().isNotEmpty) {
@@ -514,7 +512,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ...medTimes.asMap().entries.map((entry) {
                         int i = entry.key;
                         TimeOfDay time = entry.value;
-                        return // Na lista de horários do formulário, substitua o ListTile por:
+                        return
                         ListTile(
                           title: Text(
                             "Horário ${i + 1}: ${time.format(context)}",
@@ -621,7 +619,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   ElevatedButton.icon(
                     onPressed: () async {
-                      String? path = await _pickImage(); // Já usa o novo método
+                      String? path = await _pickImage();
                       if (path != null) {
                         setStateSB(() => selectedImagePath = path);
                       }
