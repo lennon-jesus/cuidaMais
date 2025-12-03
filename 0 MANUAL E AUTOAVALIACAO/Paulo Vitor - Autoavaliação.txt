@@ -1,0 +1,13 @@
+Paulo Vitor de Souza Ferreira – Autoavaliação 
+ 
+Fui responsável pela definição dos testes a serem realizados no projeto, escolhendo como seriam executados e de que forma seriam documentados. Também contribuí na elaboração da documentação geral do aplicativo. 
+ 
+
+O meu trabalho no projeto foi voltado principalmente para a documentação, o que exigiu bastante atenção e organização. Tive dificuldade no início, pois documentar um sistema enquanto ele ainda está em constante mudança não é simples. Isso tornou o processo um pouco cansativo, mas contribuiu para que eu entendesse melhor o funcionamento geral do aplicativo. 
+ 
+
+Em relação à tecnologia, o projeto foi desenvolvido utilizando o Flutter. Embora eu não tenha sido o principal responsável pela programação, percebi que a linguagem pode ser confusa para quem não está habituado: muitas estruturas encadeadas, símbolos parecidos e repetições que tornam difícil identificar exatamente o que cada parte faz. A falta de familiaridade com o framework também impactou a documentação, pois precisei pesquisar constantemente para entender componentes, funções e termos usados no desenvolvimento. 
+ 
+Apesar das dificuldades, reconheço que o Flutter é bastante prático para criar interfaces modernas e organizadas.  
+ 
+Se fosse refazer o projeto, eu me organizaria melhor desde o início para acompanhar as alterações do código, principalmente nas partes relacionadas às notificações e ao sistema de datas, que foram áreas mais complexas. Também tentaria aprofundar cedo meu entendimento da linguagem, pois isso teria facilitado bastante o processo de documentação.
